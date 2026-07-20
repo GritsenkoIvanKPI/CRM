@@ -1,0 +1,153 @@
+@import "tailwindcss";
+
+:root {
+  /* surfaces — 3-tier depth: base → elevated → floating */
+  --color-bg: #0a0a0c;
+  --color-surface: #151519;
+  --color-surface-2: #1d1d23;
+
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-border-strong: rgba(255, 255, 255, 0.15);
+
+  --color-text: #f1eee7;
+  --color-text-muted: #a7a49d;
+  --color-text-faint: #6c6a66;
+
+  /* brand accent — antique gold, not default Tailwind blue/indigo */
+  --color-accent: #c9a24c;
+  --color-accent-strong: #e2ba62;
+  --color-accent-soft: rgba(201, 162, 76, 0.14);
+  --color-accent-ink: #23190a;
+
+  --color-danger: #b56354;
+  --color-danger-soft: rgba(181, 99, 84, 0.14);
+  --color-success: #63a17f;
+  --color-success-soft: rgba(99, 161, 127, 0.14);
+
+  /* pipeline stage colors — an ordinal ramp (one hue, monotone lightness)
+     for the 5 in-progress stages, since position in the funnel is the
+     meaning; won/not_interested are fixed status colors (reuse
+     success/danger), not more ramp steps — validated via dataviz skill's
+     validate_palette.js against this dark surface. */
+  --color-stage-contacted: #6b6252;
+  --color-stage-call: #8a7850;
+  --color-stage-proposal: #ab9150;
+  --color-stage-thinking: #cba94a;
+  --color-stage-interested: #e8c052;
+  --color-stage-not-interested: #b56354;
+  --color-stage-won: #63a17f;
+
+  --shadow-color: 20 15 5;
+}
+
+@theme inline {
+  --color-bg: var(--color-bg);
+  --color-surface: var(--color-surface);
+  --color-surface-2: var(--color-surface-2);
+  --color-border: var(--color-border);
+  --color-border-strong: var(--color-border-strong);
+  --color-text: var(--color-text);
+  --color-text-muted: var(--color-text-muted);
+  --color-text-faint: var(--color-text-faint);
+  --color-accent: var(--color-accent);
+  --color-accent-strong: var(--color-accent-strong);
+  --color-accent-soft: var(--color-accent-soft);
+  --color-accent-ink: var(--color-accent-ink);
+  --color-danger: var(--color-danger);
+  --color-danger-soft: var(--color-danger-soft);
+  --color-success: var(--color-success);
+  --color-success-soft: var(--color-success-soft);
+  --color-stage-contacted: var(--color-stage-contacted);
+  --color-stage-call: var(--color-stage-call);
+  --color-stage-proposal: var(--color-stage-proposal);
+  --color-stage-thinking: var(--color-stage-thinking);
+  --color-stage-interested: var(--color-stage-interested);
+  --color-stage-not-interested: var(--color-stage-not-interested);
+  --color-stage-won: var(--color-stage-won);
+
+  --font-display: var(--font-bitter);
+  --font-sans: var(--font-manrope);
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+::selection {
+  background: var(--color-accent-soft);
+  color: var(--color-accent-strong);
+}
+
+/* layered, color-tinted shadows — never flat shadow-md */
+.shadow-elevated {
+  box-shadow:
+    0 1px 2px rgb(var(--shadow-color) / 0.4),
+    0 8px 24px -8px rgb(var(--shadow-color) / 0.5),
+    0 1px 0 0 var(--color-border);
+}
+
+.shadow-floating {
+  box-shadow:
+    0 4px 8px rgb(var(--shadow-color) / 0.35),
+    0 24px 48px -12px rgb(var(--shadow-color) / 0.6),
+    0 0 0 1px var(--color-border-strong);
+}
+
+.shadow-accent-glow {
+  box-shadow:
+    0 2px 6px rgb(var(--shadow-color) / 0.4),
+    0 0 0 1px var(--color-accent-soft),
+    0 12px 28px -10px rgb(201 162 76 / 0.25);
+}
+
+/* faint grain texture for atmosphere on large dark surfaces */
+.grain::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.035;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .animate-rise {
+    animation: rise 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@layer components {
+  .input {
+    border-radius: 0.5rem;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface-2);
+    padding: 0.625rem 0.875rem;
+    font-size: 0.875rem;
+    color: var(--color-text);
+    outline: none;
+    transition:
+      border-color 0.2s ease,
+      box-shadow 0.2s ease;
+  }
+  .input::placeholder {
+    color: var(--color-text-faint);
+  }
+  .input:focus-visible {
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px var(--color-accent-soft);
+  }
+}
