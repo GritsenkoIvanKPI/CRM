@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
   }
 
   const data = parsed.data;
-  const status = data.status ?? "contacted";
+  const status = data.status ?? "new";
 
   const [lead] = await db
     .insert(leads)
@@ -32,8 +32,13 @@ export async function POST(request: NextRequest) {
       account: data.account,
       leadGenMethod: data.leadGenMethod,
       leadGenSource: data.leadGenSource,
+      budget: data.budget,
+      budgetCurrency: data.budgetCurrency,
+      dealCurrency: data.dealCurrency,
+      isTarget: data.isTarget ?? null,
       dealValue: data.dealValue !== null ? String(data.dealValue) : null,
       nextFollowupAt: data.nextFollowupAt ? new Date(data.nextFollowupAt) : null,
+      lastPushedAt: data.lastPushedAt ? new Date(data.lastPushedAt) : null,
       status,
       notes: data.notes,
     })
@@ -44,10 +49,14 @@ export async function POST(request: NextRequest) {
     status,
   });
 
-  const calendarEventId = await syncLeadCalendarEvent(lead);
-  if (calendarEventId !== lead.calendarEventId) {
-    await db.update(leads).set({ calendarEventId }).where(eq(leads.id, lead.id));
-    lead.calendarEventId = calendarEventId;
+  const sync = await syncLeadCalendarEvent(lead);
+  if (sync.calendarEventId !== lead.calendarEventId || sync.nextFollowupAt?.getTime() !== lead.nextFollowupAt?.getTime()) {
+    await db
+      .update(leads)
+      .set({ calendarEventId: sync.calendarEventId, nextFollowupAt: sync.nextFollowupAt })
+      .where(eq(leads.id, lead.id));
+    lead.calendarEventId = sync.calendarEventId;
+    lead.nextFollowupAt = sync.nextFollowupAt;
   }
 
   return NextResponse.json({ lead }, { status: 201 });

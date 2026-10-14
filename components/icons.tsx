@@ -116,6 +116,15 @@ export function BellIcon({ className }: IconProps) {
   );
 }
 
+export function PencilIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} {...base}>
+      <path d="M4 20l1-4.5L15.5 5 19 8.5 8.5 19 4 20Z" />
+      <path d="M13 7l4 4" />
+    </svg>
+  );
+}
+
 export function ChevronRightIcon({ className }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" className={className} {...base}>

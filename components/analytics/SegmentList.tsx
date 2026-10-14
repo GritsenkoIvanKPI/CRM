@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Lead } from "@/db/schema";
-import { formatUAH, formatDate } from "@/lib/format";
+import { formatMoney, formatDate } from "@/lib/format";
 import { ChevronRightIcon } from "@/components/icons";
 
 export function SegmentList({
@@ -38,7 +38,7 @@ export function SegmentList({
                 </p>
               </div>
               <div className="flex shrink-0 items-center gap-2">
-                <span className="text-xs text-text-muted">{formatUAH(lead.dealValue)}</span>
+                <span className="text-xs text-text-muted">{formatMoney(lead.dealValue, lead.dealCurrency)}</span>
                 <ChevronRightIcon className="h-4 w-4 text-text-faint transition-transform duration-200 group-hover:translate-x-0.5" />
               </div>
             </Link>

@@ -15,7 +15,8 @@ import {
 } from "@dnd-kit/core";
 import { Lead } from "@/db/schema";
 import { LEAD_STATUSES, LeadStatus, STATUS_LABELS, STATUS_COLOR_VAR } from "@/lib/status";
-import { formatUAH, formatDate } from "@/lib/format";
+import { formatMoney, formatTotals, formatDate } from "@/lib/format";
+import { CURRENCIES, CurrencyTotals, sumDealValues } from "@/lib/currency";
 
 function noopSubscribe() {
   return () => {};
@@ -130,14 +131,14 @@ export function KanbanBoard({ leads: initialLeads }: { leads: Lead[] }) {
 function ColumnShell({
   status,
   count,
-  total,
+  totals,
   isOver,
   setNodeRef,
   children,
 }: {
   status: LeadStatus;
   count: number;
-  total: number;
+  totals: CurrencyTotals;
   isOver?: boolean;
   setNodeRef?: (el: HTMLElement | null) => void;
   children: React.ReactNode;
@@ -162,9 +163,9 @@ function ColumnShell({
           <span className="text-xs text-text-faint">{count}</span>
         </div>
       </div>
-      {total > 0 ? (
+      {CURRENCIES.some((c) => totals[c] > 0) ? (
         <div className="border-b border-border px-4 py-2 text-xs text-text-faint">
-          Разом: {formatUAH(total)}
+          Разом: {formatTotals(totals)}
         </div>
       ) : null}
 
@@ -181,9 +182,9 @@ function ColumnShell({
 }
 
 function StaticColumn({ status, leads }: { status: LeadStatus; leads: Lead[] }) {
-  const total = leads.reduce((sum, l) => sum + Number(l.dealValue ?? 0), 0);
+  const totals = sumDealValues(leads);
   return (
-    <ColumnShell status={status} count={leads.length} total={total}>
+    <ColumnShell status={status} count={leads.length} totals={totals}>
       {leads.map((lead) => (
         <LeadCard key={lead.id} lead={lead} />
       ))}
@@ -201,13 +202,13 @@ function DroppableColumn({
   pendingIds: Set<string>;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
-  const total = leads.reduce((sum, l) => sum + Number(l.dealValue ?? 0), 0);
+  const totals = sumDealValues(leads);
 
   return (
     <ColumnShell
       status={status}
       count={leads.length}
-      total={total}
+      totals={totals}
       isOver={isOver}
       setNodeRef={setNodeRef}
     >
@@ -254,7 +255,7 @@ function LeadCard({ lead, dragging }: { lead: Lead; dragging?: boolean }) {
         {lead.niche ?? "—"} · {lead.geo ?? "—"}
       </p>
       <div className="mt-2 flex items-center justify-between text-xs text-text-muted">
-        <span>{formatUAH(lead.dealValue)}</span>
+        <span>{formatMoney(lead.dealValue, lead.dealCurrency)}</span>
         <span>{lead.nextFollowupAt ? formatDate(lead.nextFollowupAt) : ""}</span>
       </div>
     </Link>

@@ -12,7 +12,7 @@ import { BreakdownSection } from "@/components/analytics/BreakdownSection";
 import { TrendCharts } from "@/components/analytics/TrendCharts";
 import { SegmentList } from "@/components/analytics/SegmentList";
 import { KpiCard } from "@/components/dashboard/KpiCard";
-import { formatUAH } from "@/lib/format";
+import { formatTotals } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -36,8 +36,6 @@ export default async function AnalyticsPage({
       listLeads({ status: "won", sort: "createdAt", order: "desc" }),
     ]);
 
-  const totalRevenue = methodBreakdown.reduce((sum, r) => sum + r.revenue, 0);
-
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-6">
       <div className="animate-rise flex flex-col gap-1">
@@ -57,7 +55,7 @@ export default async function AnalyticsPage({
           hint={`${funnelData.won} продажів`}
           accent
         />
-        <KpiCard label="Дохід" value={formatUAH(totalRevenue)} />
+        <KpiCard label="Дохід" value={formatTotals(funnelData.revenue)} />
         <KpiCard label="Не цікаво" value={funnelData.notInterested} />
       </section>
 

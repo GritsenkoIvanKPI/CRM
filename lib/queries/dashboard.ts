@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { leads, leadStatusHistory } from "@/db/schema";
 import { and, eq, gte, lte, lt, sql, asc } from "drizzle-orm";
+import { revenueByCurrency, parseTotals } from "@/lib/queries/revenue";
 import { startOfDay, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
 
 export async function getDashboardData() {
@@ -21,7 +22,7 @@ export async function getDashboardData() {
             lte(leads.nextFollowupAt, weekEnd),
           ),
         )
-        .orderBy(asc(leads.nextFollowupAt)),
+        .orderBy(asc(leads.nextFollowupAt), asc(leads.id)),
 
       db
         .select()
@@ -32,7 +33,7 @@ export async function getDashboardData() {
             sql`${leads.status} not in ('won', 'not_interested')`,
           ),
         )
-        .orderBy(asc(leads.nextFollowupAt)),
+        .orderBy(asc(leads.nextFollowupAt), asc(leads.id)),
 
       db
         .select({
@@ -46,7 +47,7 @@ export async function getDashboardData() {
 
       db
         .select({
-          revenue: sql<string>`coalesce(sum(${leads.dealValue}), 0)`,
+          revenue: revenueByCurrency(),
         })
         .from(leads)
         .innerJoin(
@@ -63,14 +64,14 @@ export async function getDashboardData() {
 
       db
         .select({
-          revenueAll: sql<string>`coalesce(sum(${leads.dealValue}) filter (where ${leads.status} = 'won'), 0)`,
+          revenueAll: revenueByCurrency(sql`${leads.status} = 'won'`),
         })
         .from(leads),
     ]);
 
   const kpi = kpiRow[0];
-  const revenueThisMonth = Number(revenueRow[0]?.revenue ?? 0);
-  const totalRevenue = Number(totalRow[0]?.revenueAll ?? 0);
+  const revenueThisMonth = parseTotals(revenueRow[0]?.revenue);
+  const totalRevenue = parseTotals(totalRow[0]?.revenueAll);
   const closeRate = kpi.total > 0 ? Math.round((kpi.won / kpi.total) * 100) : 0;
 
   return {

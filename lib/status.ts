@@ -1,4 +1,5 @@
 export const LEAD_STATUSES = [
+  "new",
   "contacted",
   "call",
   "proposal",
@@ -11,6 +12,7 @@ export const LEAD_STATUSES = [
 export type LeadStatus = (typeof LEAD_STATUSES)[number];
 
 export const STATUS_LABELS: Record<LeadStatus, string> = {
+  new: "Новий",
   contacted: "Написав",
   call: "Колл",
   proposal: "КП",
@@ -21,6 +23,7 @@ export const STATUS_LABELS: Record<LeadStatus, string> = {
 };
 
 export const STATUS_COLOR_VAR: Record<LeadStatus, string> = {
+  new: "--color-stage-new",
   contacted: "--color-stage-contacted",
   call: "--color-stage-call",
   proposal: "--color-stage-proposal",

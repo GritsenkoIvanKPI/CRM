@@ -3,12 +3,16 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CloseIcon } from "@/components/icons";
+import { Combobox } from "@/components/Combobox";
+import { CurrencySelect } from "@/components/CurrencySelect";
+import { Currency, DEFAULT_BUDGET_CURRENCY } from "@/lib/currency";
 
 type Props = {
   open: boolean;
   onClose: () => void;
   niches: string[];
   methods: string[];
+  leadGenSources: string[];
 };
 
 const emptyForm = {
@@ -18,15 +22,18 @@ const emptyForm = {
   instagram: "",
   niche: "",
   leadGenMethod: "",
+  leadGenSource: "",
+  budget: "",
+  budgetCurrency: DEFAULT_BUDGET_CURRENCY as Currency,
 };
 
-export function QuickAddDrawer({ open, onClose, niches, methods }: Props) {
+export function QuickAddDrawer({ open, onClose, niches, methods, leadGenSources }: Props) {
   const router = useRouter();
   const [form, setForm] = useState(emptyForm);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  function update<K extends keyof typeof emptyForm>(key: K, value: string) {
+  function update<K extends keyof typeof emptyForm>(key: K, value: (typeof emptyForm)[K]) {
     setForm((f) => ({ ...f, [key]: value }));
   }
 
@@ -155,6 +162,31 @@ export function QuickAddDrawer({ open, onClose, niches, methods }: Props) {
               </datalist>
             </Field>
           </div>
+
+          <Field label="Лідген (хто/що)">
+            <Combobox
+              value={form.leadGenSource}
+              onChange={(v) => update("leadGenSource", v)}
+              options={leadGenSources}
+              placeholder="Почніть вводити..."
+            />
+          </Field>
+
+          <Field label="Бюджет">
+            <div className="flex gap-2">
+              <input
+                value={form.budget}
+                onChange={(e) => update("budget", e.target.value)}
+                className="input min-w-0 flex-1"
+                placeholder="Назвав на дзвінку"
+              />
+              <CurrencySelect
+                label="Валюта бюджету"
+                value={form.budgetCurrency}
+                onChange={(c) => update("budgetCurrency", c)}
+              />
+            </div>
+          </Field>
 
           {error ? (
             <p className="rounded-lg border border-danger-soft bg-danger-soft px-3 py-2 text-sm text-danger">

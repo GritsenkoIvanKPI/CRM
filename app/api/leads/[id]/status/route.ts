@@ -34,10 +34,14 @@ export async function POST(request: NextRequest, { params }: Params) {
 
   await db.insert(leadStatusHistory).values({ leadId: id, status });
 
-  const calendarEventId = await syncLeadCalendarEvent(lead);
-  if (calendarEventId !== lead.calendarEventId) {
-    await db.update(leads).set({ calendarEventId }).where(eq(leads.id, id));
-    lead.calendarEventId = calendarEventId;
+  const sync = await syncLeadCalendarEvent(lead);
+  if (sync.calendarEventId !== lead.calendarEventId || sync.nextFollowupAt?.getTime() !== lead.nextFollowupAt?.getTime()) {
+    await db
+      .update(leads)
+      .set({ calendarEventId: sync.calendarEventId, nextFollowupAt: sync.nextFollowupAt })
+      .where(eq(leads.id, id));
+    lead.calendarEventId = sync.calendarEventId;
+    lead.nextFollowupAt = sync.nextFollowupAt;
   }
 
   return NextResponse.json({ lead });

@@ -17,6 +17,7 @@ export const CHART_COLORS = {
   // (CVD normal-vision floor 23.8, well above the 15 gate)
   trendSales: "#1f8fac",
   stage: {
+    new: "#4a453a",
     contacted: "#6b6252",
     call: "#8a7850",
     proposal: "#ab9150",

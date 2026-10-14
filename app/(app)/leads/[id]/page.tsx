@@ -1,11 +1,12 @@
 import { notFound } from "next/navigation";
-import Link from "next/link";
 import {
   getLeadById,
   getLeadHistory,
   getDistinctFieldValues,
 } from "@/lib/queries/leads";
+import { getLeadGenSourceNames } from "@/lib/queries/leadGenSources";
 import { LeadDetailForm } from "@/components/leads/LeadDetailForm";
+import { LeadsBackLink } from "@/components/leads/LeadsBackLink";
 import { ChevronRightIcon } from "@/components/icons";
 
 export const dynamic = "force-dynamic";
@@ -19,19 +20,18 @@ export default async function LeadDetailPage({
   const lead = await getLeadById(id);
   if (!lead) notFound();
 
-  const [history, niches, geos, methods] = await Promise.all([
+  const [history, niches, geos, methods, leadGenSources] = await Promise.all([
     getLeadHistory(id),
     getDistinctFieldValues("niche"),
     getDistinctFieldValues("geo"),
     getDistinctFieldValues("leadGenMethod"),
+    getLeadGenSourceNames(),
   ]);
 
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-6">
       <div className="animate-rise flex items-center gap-1.5 text-sm text-text-faint">
-        <Link href="/leads" className="transition-colors duration-200 hover:text-text">
-          Ліди
-        </Link>
+        <LeadsBackLink />
         <ChevronRightIcon className="h-3.5 w-3.5" />
         <span className="text-text">{lead.businessName}</span>
       </div>
@@ -40,7 +40,14 @@ export default async function LeadDetailPage({
         {lead.businessName}
       </h1>
 
-      <LeadDetailForm lead={lead} history={history} niches={niches} geos={geos} methods={methods} />
+      <LeadDetailForm
+        lead={lead}
+        history={history}
+        niches={niches}
+        geos={geos}
+        methods={methods}
+        leadGenSources={leadGenSources}
+      />
     </div>
   );
 }

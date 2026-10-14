@@ -36,6 +36,34 @@ export async function PATCH(request: NextRequest, { params }: Params) {
   const data = parsed.data;
   const statusChanged = data.status && data.status !== existing.status;
 
+  const newNextFollowupAt =
+    data.nextFollowupAt !== undefined
+      ? data.nextFollowupAt
+        ? new Date(data.nextFollowupAt)
+        : null
+      : undefined;
+  const nextFollowupSetToNewValue =
+    newNextFollowupAt !== undefined &&
+    newNextFollowupAt !== null &&
+    newNextFollowupAt.getTime() !== existing.nextFollowupAt?.getTime();
+
+  const newLastPushedAt =
+    data.lastPushedAt !== undefined
+      ? data.lastPushedAt
+        ? new Date(data.lastPushedAt)
+        : null
+      : undefined;
+  const lastPushedExplicitlySet =
+    newLastPushedAt !== undefined &&
+    newLastPushedAt?.getTime() !== existing.lastPushedAt?.getTime();
+
+  // Scheduling a new next-push is, in practice, evidence that you just
+  // pushed this lead — auto-stamp today as the last push, unless the
+  // caller is deliberately setting a different lastPushedAt in the same
+  // request (e.g. backdating it from the lead detail page).
+  const autoLastPushedAt =
+    nextFollowupSetToNewValue && !lastPushedExplicitlySet ? new Date() : undefined;
+
   const [lead] = await db
     .update(leads)
     .set({
@@ -49,12 +77,17 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       ...(data.account !== undefined && { account: data.account }),
       ...(data.leadGenMethod !== undefined && { leadGenMethod: data.leadGenMethod }),
       ...(data.leadGenSource !== undefined && { leadGenSource: data.leadGenSource }),
+      ...(data.budget !== undefined && { budget: data.budget }),
+      ...(data.budgetCurrency !== undefined && { budgetCurrency: data.budgetCurrency }),
+      ...(data.dealCurrency !== undefined && { dealCurrency: data.dealCurrency }),
+      ...(data.isTarget !== undefined && { isTarget: data.isTarget }),
       ...(data.dealValue !== undefined && {
         dealValue: data.dealValue !== null ? String(data.dealValue) : null,
       }),
-      ...(data.nextFollowupAt !== undefined && {
-        nextFollowupAt: data.nextFollowupAt ? new Date(data.nextFollowupAt) : null,
-      }),
+      ...(newNextFollowupAt !== undefined && { nextFollowupAt: newNextFollowupAt }),
+      ...(autoLastPushedAt
+        ? { lastPushedAt: autoLastPushedAt }
+        : newLastPushedAt !== undefined && { lastPushedAt: newLastPushedAt }),
       ...(data.status !== undefined && { status: data.status }),
       ...(data.notes !== undefined && { notes: data.notes }),
       updatedAt: new Date(),
@@ -66,10 +99,14 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     await db.insert(leadStatusHistory).values({ leadId: id, status: data.status });
   }
 
-  const calendarEventId = await syncLeadCalendarEvent(lead);
-  if (calendarEventId !== lead.calendarEventId) {
-    await db.update(leads).set({ calendarEventId }).where(eq(leads.id, id));
-    lead.calendarEventId = calendarEventId;
+  const sync = await syncLeadCalendarEvent(lead);
+  if (sync.calendarEventId !== lead.calendarEventId || sync.nextFollowupAt?.getTime() !== lead.nextFollowupAt?.getTime()) {
+    await db
+      .update(leads)
+      .set({ calendarEventId: sync.calendarEventId, nextFollowupAt: sync.nextFollowupAt })
+      .where(eq(leads.id, id));
+    lead.calendarEventId = sync.calendarEventId;
+    lead.nextFollowupAt = sync.nextFollowupAt;
   }
 
   return NextResponse.json({ lead });

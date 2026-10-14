@@ -1,12 +1,13 @@
 import { CHART_COLORS } from "@/lib/chart-colors";
-import { formatUAH } from "@/lib/format";
+import { formatTotals } from "@/lib/format";
+import { CurrencyTotals } from "@/lib/currency";
 import { BarRow } from "./BarRow";
 
 type BreakdownRow = {
   value: string;
   count: number;
   won: number;
-  revenue: number;
+  revenue: CurrencyTotals;
   conversionRate: number;
 };
 
@@ -35,7 +36,7 @@ export function BreakdownSection({
               key={row.value}
               label={row.value}
               value={`${row.count} лід${row.count === 1 ? "" : "ів"}`}
-              sublabel={`· ${row.conversionRate}% · ${formatUAH(row.revenue)}`}
+              sublabel={`· ${row.conversionRate}% · ${formatTotals(row.revenue)}`}
               pct={(row.count / maxCount) * 100}
               color={CHART_COLORS.accent}
             />

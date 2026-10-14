@@ -39,6 +39,10 @@ yarn-error.log*
 # design QA screenshots (not project source)
 /temporary screenshots/
 
+# source data with real client PII — never commit
+*.xlsx
+~$*
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

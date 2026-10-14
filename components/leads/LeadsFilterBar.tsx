@@ -4,6 +4,8 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { SearchIcon } from "@/components/icons";
 import { LEAD_STATUSES, STATUS_LABELS } from "@/lib/status";
+import { FollowupDateFilter } from "@/components/leads/FollowupDateFilter";
+import { rememberLeadsQuery } from "@/lib/leads-return";
 
 type Props = {
   niches: string[];
@@ -29,6 +31,10 @@ export function LeadsFilterBar({ niches, geos, methods }: Props) {
       router.push(`${pathname}?${params.toString()}`);
     });
   }
+
+  useEffect(() => {
+    rememberLeadsQuery(searchParams.toString());
+  }, [searchParams]);
 
   useEffect(() => {
     const handle = setTimeout(() => {
@@ -103,6 +109,8 @@ export function LeadsFilterBar({ niches, geos, methods }: Props) {
           </option>
         ))}
       </select>
+
+      <FollowupDateFilter />
     </div>
   );
 }

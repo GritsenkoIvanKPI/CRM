@@ -10,9 +10,10 @@ type Props = {
   children: ReactNode;
   niches: string[];
   methods: string[];
+  leadGenSources: string[];
 };
 
-export function AppShell({ children, niches, methods }: Props) {
+export function AppShell({ children, niches, methods, leadGenSources }: Props) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const router = useRouter();
@@ -98,6 +99,7 @@ export function AppShell({ children, niches, methods }: Props) {
         onClose={() => setQuickAddOpen(false)}
         niches={niches}
         methods={methods}
+        leadGenSources={leadGenSources}
       />
     </div>
   );

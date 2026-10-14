@@ -25,10 +25,12 @@
   --color-success-soft: rgba(99, 161, 127, 0.14);
 
   /* pipeline stage colors — an ordinal ramp (one hue, monotone lightness)
-     for the 5 in-progress stages, since position in the funnel is the
+     for the 6 in-progress stages, since position in the funnel is the
      meaning; won/not_interested are fixed status colors (reuse
      success/danger), not more ramp steps — validated via dataviz skill's
-     validate_palette.js against this dark surface. */
+     validate_palette.js against this dark surface. "new" sits one step
+     below "contacted" — created but not yet actioned. */
+  --color-stage-new: #4a453a;
   --color-stage-contacted: #6b6252;
   --color-stage-call: #8a7850;
   --color-stage-proposal: #ab9150;
@@ -57,6 +59,7 @@
   --color-danger-soft: var(--color-danger-soft);
   --color-success: var(--color-success);
   --color-success-soft: var(--color-success-soft);
+  --color-stage-new: var(--color-stage-new);
   --color-stage-contacted: var(--color-stage-contacted);
   --color-stage-call: var(--color-stage-call);
   --color-stage-proposal: var(--color-stage-proposal);

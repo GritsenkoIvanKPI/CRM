@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { LEAD_STATUSES } from "@/lib/status";
+import { CURRENCIES } from "@/lib/currency";
 
 const optionalText = z
   .string()
@@ -20,6 +21,10 @@ export const leadInputSchema = z.object({
   account: optionalText,
   leadGenMethod: optionalText,
   leadGenSource: optionalText,
+  budget: optionalText,
+  budgetCurrency: z.enum(CURRENCIES).optional(),
+  dealCurrency: z.enum(CURRENCIES).optional(),
+  isTarget: z.boolean().nullable().optional(),
   dealValue: z
     .union([z.number(), z.string(), z.null()])
     .optional()
@@ -29,6 +34,10 @@ export const leadInputSchema = z.object({
       return Number.isFinite(num) ? num : null;
     }),
   nextFollowupAt: z
+    .union([z.string(), z.null()])
+    .optional()
+    .transform((v) => (v ? v : null)),
+  lastPushedAt: z
     .union([z.string(), z.null()])
     .optional()
     .transform((v) => (v ? v : null)),

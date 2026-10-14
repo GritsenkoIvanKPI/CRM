@@ -1,11 +1,17 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Lead, LeadStatusHistoryEntry } from "@/db/schema";
 import { LEAD_STATUSES, STATUS_LABELS } from "@/lib/status";
 import { StatusBadge } from "@/components/StatusBadge";
+import { Combobox } from "@/components/Combobox";
+import { CurrencySelect } from "@/components/CurrencySelect";
+import { DEFAULT_BUDGET_CURRENCY, DEFAULT_DEAL_CURRENCY, toCurrency } from "@/lib/currency";
 import { formatDateTime, formatMonth } from "@/lib/format";
+import { getLeadsHref } from "@/lib/leads-return";
+
+const AUTOSAVE_DELAY_MS = 700;
 
 type Props = {
   lead: Lead;
@@ -13,6 +19,7 @@ type Props = {
   niches: string[];
   geos: string[];
   methods: string[];
+  leadGenSources: string[];
 };
 
 function toDateTimeLocal(value: Date | string | null) {
@@ -22,9 +29,20 @@ function toDateTimeLocal(value: Date | string | null) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-export function LeadDetailForm({ lead, history, niches, geos, methods }: Props) {
-  const router = useRouter();
-  const [form, setForm] = useState({
+// UTC getters (not local) so this date-only field renders identically during
+// server-side rendering (UTC) and client hydration (viewer's timezone) —
+// mismatched getters here can trigger a React hydration error for leads
+// whose stored time sits near a day boundary. Paired with the "Z" suffix
+// in the save() UTC round-trip below.
+function toDateInput(value: Date | string | null) {
+  if (!value) return "";
+  const d = new Date(value);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
+}
+
+function buildForm(lead: Lead) {
+  return {
     businessName: lead.businessName,
     telegram: lead.telegram ?? "",
     phone: lead.phone ?? "",
@@ -35,56 +53,92 @@ export function LeadDetailForm({ lead, history, niches, geos, methods }: Props) 
     account: lead.account ?? "",
     leadGenMethod: lead.leadGenMethod ?? "",
     leadGenSource: lead.leadGenSource ?? "",
+    budget: lead.budget ?? "",
+    budgetCurrency: toCurrency(lead.budgetCurrency, DEFAULT_BUDGET_CURRENCY),
+    dealCurrency: toCurrency(lead.dealCurrency, DEFAULT_DEAL_CURRENCY),
+    isTarget: lead.isTarget,
     dealValue: lead.dealValue ?? "",
     nextFollowupAt: toDateTimeLocal(lead.nextFollowupAt),
+    lastPushedAt: toDateInput(lead.lastPushedAt),
     status: lead.status,
     notes: lead.notes ?? "",
-  });
+  };
+}
+
+type FormState = ReturnType<typeof buildForm>;
+
+function isDirty(a: FormState, b: FormState) {
+  return (
+    a.businessName !== b.businessName ||
+    a.telegram !== b.telegram ||
+    a.phone !== b.phone ||
+    a.instagram !== b.instagram ||
+    a.niche !== b.niche ||
+    a.geo !== b.geo ||
+    a.website !== b.website ||
+    a.account !== b.account ||
+    a.leadGenMethod !== b.leadGenMethod ||
+    a.leadGenSource !== b.leadGenSource ||
+    a.budget !== b.budget ||
+    a.budgetCurrency !== b.budgetCurrency ||
+    a.dealCurrency !== b.dealCurrency ||
+    a.isTarget !== b.isTarget ||
+    String(a.dealValue) !== String(b.dealValue) ||
+    a.nextFollowupAt !== b.nextFollowupAt ||
+    a.lastPushedAt !== b.lastPushedAt ||
+    a.status !== b.status ||
+    a.notes !== b.notes
+  );
+}
+
+export function LeadDetailForm({
+  lead,
+  history,
+  niches,
+  geos,
+  methods,
+  leadGenSources,
+}: Props) {
+  const router = useRouter();
+  const [form, setForm] = useState<FormState>(() => buildForm(lead));
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<number | null>(null);
 
-  const dirty = useMemo(() => {
-    return (
-      form.businessName !== lead.businessName ||
-      form.telegram !== (lead.telegram ?? "") ||
-      form.phone !== (lead.phone ?? "") ||
-      form.instagram !== (lead.instagram ?? "") ||
-      form.niche !== (lead.niche ?? "") ||
-      form.geo !== (lead.geo ?? "") ||
-      form.website !== (lead.website ?? "") ||
-      form.account !== (lead.account ?? "") ||
-      form.leadGenMethod !== (lead.leadGenMethod ?? "") ||
-      form.leadGenSource !== (lead.leadGenSource ?? "") ||
-      String(form.dealValue) !== String(lead.dealValue ?? "") ||
-      form.nextFollowupAt !== toDateTimeLocal(lead.nextFollowupAt) ||
-      form.status !== lead.status ||
-      form.notes !== (lead.notes ?? "")
-    );
-  }, [form, lead]);
+  const formRef = useRef(form);
+  formRef.current = form;
+  const savedSnapshotRef = useRef<FormState>(form);
+  const savingRef = useRef(false);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  function update<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
+  function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((f) => ({ ...f, [key]: value }));
   }
 
-  async function handleSubmit(event: FormEvent) {
-    event.preventDefault();
+  async function save() {
+    if (savingRef.current) return;
+    savingRef.current = true;
     setSaving(true);
     setError(null);
 
+    const toSave = formRef.current;
     const res = await fetch(`/api/leads/${lead.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        ...form,
-        dealValue: form.dealValue === "" ? null : Number(form.dealValue),
-        nextFollowupAt: form.nextFollowupAt
-          ? new Date(form.nextFollowupAt).toISOString()
+        ...toSave,
+        dealValue: toSave.dealValue === "" ? null : Number(toSave.dealValue),
+        nextFollowupAt: toSave.nextFollowupAt
+          ? new Date(toSave.nextFollowupAt).toISOString()
+          : null,
+        lastPushedAt: toSave.lastPushedAt
+          ? new Date(`${toSave.lastPushedAt}T00:00:00Z`).toISOString()
           : null,
       }),
     });
 
+    savingRef.current = false;
     setSaving(false);
 
     if (!res.ok) {
@@ -93,18 +147,35 @@ export function LeadDetailForm({ lead, history, niches, geos, methods }: Props) 
       return;
     }
 
+    savedSnapshotRef.current = toSave;
     setSavedAt(Date.now());
     router.refresh();
+
+    if (isDirty(formRef.current, toSave)) {
+      void save();
+    }
   }
+
+  // Debounced autosave: wait for a pause in editing, then persist.
+  useEffect(() => {
+    if (!isDirty(form, savedSnapshotRef.current)) return;
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => void save(), AUTOSAVE_DELAY_MS);
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form]);
 
   async function handleDelete() {
     if (!confirm(`Видалити лід «${lead.businessName}»? Цю дію не можна скасувати.`)) {
       return;
     }
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
     setDeleting(true);
     const res = await fetch(`/api/leads/${lead.id}`, { method: "DELETE" });
     if (res.ok) {
-      router.push("/leads");
+      router.push(getLeadsHref());
       router.refresh();
     } else {
       setDeleting(false);
@@ -113,7 +184,7 @@ export function LeadDetailForm({ lead, history, niches, geos, methods }: Props) 
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-6 lg:flex-row">
+    <div className="flex flex-col gap-6 lg:flex-row">
       <div className="flex-1 space-y-6">
         <div className="shadow-elevated rounded-2xl border border-border bg-surface p-6">
           <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
@@ -214,22 +285,45 @@ export function LeadDetailForm({ lead, history, niches, geos, methods }: Props) 
               </datalist>
             </Field>
             <Field label="Лідген (хто/що)">
-              <input
-                className="input"
+              <Combobox
                 value={form.leadGenSource}
-                onChange={(e) => update("leadGenSource", e.target.value)}
+                onChange={(v) => update("leadGenSource", v)}
+                options={leadGenSources}
+                placeholder="Почніть вводити..."
               />
             </Field>
-            <Field label="Чек, ₴">
-              <input
-                type="number"
-                min="0"
-                className="input"
-                value={form.dealValue}
-                onChange={(e) => update("dealValue", e.target.value)}
-              />
+            <Field label="Бюджет">
+              <div className="flex gap-2">
+                <input
+                  className="input min-w-0 flex-1"
+                  value={form.budget}
+                  onChange={(e) => update("budget", e.target.value)}
+                  placeholder="Назвав на дзвінку"
+                />
+                <CurrencySelect
+                  label="Валюта бюджету"
+                  value={form.budgetCurrency}
+                  onChange={(c) => update("budgetCurrency", c)}
+                />
+              </div>
             </Field>
-            <Field label="Дата пушу">
+            <Field label="Чек">
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  min="0"
+                  className="input min-w-0 flex-1"
+                  value={form.dealValue}
+                  onChange={(e) => update("dealValue", e.target.value)}
+                />
+                <CurrencySelect
+                  label="Валюта чека"
+                  value={form.dealCurrency}
+                  onChange={(c) => update("dealCurrency", c)}
+                />
+              </div>
+            </Field>
+            <Field label="Наступний пуш">
               <input
                 type="datetime-local"
                 className="input"
@@ -237,19 +331,38 @@ export function LeadDetailForm({ lead, history, niches, geos, methods }: Props) 
                 onChange={(e) => update("nextFollowupAt", e.target.value)}
               />
             </Field>
+            <Field label="Останній пуш">
+              <input
+                type="date"
+                className="input"
+                value={form.lastPushedAt}
+                onChange={(e) => update("lastPushedAt", e.target.value)}
+              />
+            </Field>
             <Field label="Статус">
               <select
                 className="input"
                 value={form.status}
-                onChange={(e) =>
-                  update("status", e.target.value as typeof form.status)
-                }
+                onChange={(e) => update("status", e.target.value as FormState["status"])}
               >
                 {LEAD_STATUSES.map((s) => (
                   <option key={s} value={s}>
                     {STATUS_LABELS[s]}
                   </option>
                 ))}
+              </select>
+            </Field>
+            <Field label="Цільовий лід">
+              <select
+                className="input"
+                value={form.isTarget === null ? "" : String(form.isTarget)}
+                onChange={(e) =>
+                  update("isTarget", e.target.value === "" ? null : e.target.value === "true")
+                }
+              >
+                <option value="">Не визначено</option>
+                <option value="true">Так</option>
+                <option value="false">Ні</option>
               </select>
             </Field>
             <Field label="Дата створення">
@@ -279,16 +392,7 @@ export function LeadDetailForm({ lead, history, niches, geos, methods }: Props) 
         ) : null}
 
         <div className="flex items-center gap-3">
-          <button
-            type="submit"
-            disabled={!dirty || saving}
-            className="shadow-accent-glow rounded-lg bg-accent px-5 py-3 text-sm font-semibold text-accent-ink transition-transform duration-200 ease-out hover:bg-accent-strong active:scale-[0.98] disabled:opacity-50 disabled:active:scale-100"
-          >
-            {saving ? "Збереження..." : "Зберегти зміни"}
-          </button>
-          {!dirty && savedAt ? (
-            <span className="text-xs text-success">Збережено</span>
-          ) : null}
+          <SaveStatus saving={saving} savedAt={savedAt} />
           <button
             type="button"
             onClick={handleDelete}
@@ -322,8 +426,18 @@ export function LeadDetailForm({ lead, history, niches, geos, methods }: Props) 
           </ol>
         </div>
       </div>
-    </form>
+    </div>
   );
+}
+
+function SaveStatus({ saving, savedAt }: { saving: boolean; savedAt: number | null }) {
+  if (saving) {
+    return <span className="text-sm text-text-faint">Збереження...</span>;
+  }
+  if (savedAt) {
+    return <span className="text-sm text-success">Збережено</span>;
+  }
+  return null;
 }
 
 function Field({

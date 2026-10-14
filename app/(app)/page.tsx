@@ -2,7 +2,7 @@ import Link from "next/link";
 import { getDashboardData } from "@/lib/queries/dashboard";
 import { KpiCard } from "@/components/dashboard/KpiCard";
 import { StatusBadge } from "@/components/StatusBadge";
-import { formatUAH, formatDateTime } from "@/lib/format";
+import { formatTotals, formatDateTime } from "@/lib/format";
 
 // live DB reads (today's follow-ups, KPIs) — never statically cache this
 export const dynamic = "force-dynamic";
@@ -69,12 +69,12 @@ export default async function DashboardPage() {
         />
         <KpiCard
           label="Дохід цього місяця"
-          value={formatUAH(kpi.revenueThisMonth)}
+          value={formatTotals(kpi.revenueThisMonth)}
           hint="Сума угод зі статусом «Продаж»"
         />
         <KpiCard
           label="Загальний дохід"
-          value={formatUAH(kpi.totalRevenue)}
+          value={formatTotals(kpi.totalRevenue)}
           hint="За весь час"
         />
       </section>
