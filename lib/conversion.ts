@@ -52,9 +52,6 @@ export type ConversionRow = {
   target: number;
   targetAssessed: number;
   revenue: CurrencyTotals;
-  // month view only: deals closed during this month, whenever the lead came in
-  soldInPeriod: number;
-  revenueInPeriod: CurrencyTotals;
 };
 
 export const NO_GROUP_LABEL = "Не вказано";

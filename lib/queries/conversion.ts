@@ -43,8 +43,6 @@ function emptyRow(key: string, label: string): ConversionRow {
     target: 0,
     targetAssessed: 0,
     revenue: emptyTotals(),
-    soldInPeriod: 0,
-    revenueInPeriod: emptyTotals(),
   };
 }
 
@@ -82,7 +80,6 @@ export async function getConversionTable(
       dealValue: leads.dealValue,
       dealCurrency: leads.dealCurrency,
       history: sql<string[]>`coalesce(array_agg(distinct ${leadStatusHistory.status}::text) filter (where ${leadStatusHistory.status} is not null), '{}')`,
-      soldAt: sql<Date | null>`max(${leadStatusHistory.changedAt}) filter (where ${leadStatusHistory.status} = 'won')`,
     })
     .from(leads)
     .leftJoin(leadStatusHistory, eq(leadStatusHistory.leadId, leads.id))
@@ -131,16 +128,6 @@ export async function getConversionTable(
       if (lead.isTarget !== null) {
         target.targetAssessed += 1;
         if (lead.isTarget) target.target += 1;
-      }
-    }
-
-    // Month view also shows what closed *in* each month, whenever the lead
-    // came in — the cohort columns alone lag behind for recent months.
-    if (groupBy === "month" && lead.status === "won" && lead.soldAt) {
-      const soldRow = rowFor(monthKey(new Date(lead.soldAt)));
-      for (const target of [soldRow, total]) {
-        target.soldInPeriod += 1;
-        target.revenueInPeriod[currency] += Number(lead.dealValue ?? 0);
       }
     }
   }

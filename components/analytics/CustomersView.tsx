@@ -6,8 +6,9 @@ import type { Customer } from "@/lib/queries/sales";
 import { KpiCard } from "@/components/dashboard/KpiCard";
 import { LeadRowActions } from "@/components/leads/LeadRowActions";
 import { DownloadIcon, SearchIcon } from "@/components/icons";
+import { MoneyLines } from "@/components/analytics/MoneyLines";
 import { formatDate, formatMoney, formatMonth } from "@/lib/format";
-import { CURRENCIES, CurrencyTotals, DEFAULT_DEAL_CURRENCY, emptyTotals, toCurrency } from "@/lib/currency";
+import { CURRENCIES, DEFAULT_DEAL_CURRENCY, emptyTotals, toCurrency } from "@/lib/currency";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const NO_SOURCE = "Не вказано";
@@ -368,22 +369,6 @@ function SortHeader({
         {active ? <span className="text-accent">{desc ? "↓" : "↑"}</span> : null}
       </button>
     </th>
-  );
-}
-
-// One currency per line — a sum like "8 400 ₴ · 1 450 $ · 3 400 €" wraps
-// mid-amount at KPI size. Currencies are never added together.
-function MoneyLines({ totals }: { totals: CurrencyTotals }) {
-  const used = CURRENCIES.filter((c) => totals[c] !== 0);
-  if (used.length <= 1) return <>{formatMoney(totals[used[0] ?? DEFAULT_DEAL_CURRENCY], used[0])}</>;
-  return (
-    <span className="flex flex-col gap-1.5 text-[22px]">
-      {used.map((c) => (
-        <span key={c} className="whitespace-nowrap">
-          {formatMoney(totals[c], c)}
-        </span>
-      ))}
-    </span>
   );
 }
 
