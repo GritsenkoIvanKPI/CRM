@@ -58,7 +58,7 @@ export function AppShell({ children, niches, methods, leadGenSources }: Props) {
         </div>
       ) : null}
 
-      <div className="relative z-10 flex min-h-screen flex-1 flex-col">
+      <div className="relative z-10 flex min-h-screen min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-border bg-bg px-4 py-3 sm:px-6">
           <button
             type="button"

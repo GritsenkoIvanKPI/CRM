@@ -44,6 +44,17 @@ export function formatBudget(
   return `${budget} ${CURRENCY_SYMBOLS[toCurrency(currency, DEFAULT_BUDGET_CURRENCY)]}`;
 }
 
+const percentFormatter = new Intl.NumberFormat("uk-UA", {
+  style: "decimal",
+  maximumFractionDigits: 1,
+});
+
+// "70,6%" — one decimal, like the old conversion spreadsheet.
+export function formatPercent(num: number, den: number) {
+  if (den === 0) return "—";
+  return `${percentFormatter.format((num / den) * 100)}%`;
+}
+
 // timeZone is pinned to UTC on every formatter below for the same reason as
 // numberFormatter above: several of these run in client components, and an
 // unpinned zone resolves to the server's zone during SSR but the viewer's

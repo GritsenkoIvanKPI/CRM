@@ -7,6 +7,7 @@ import {
 } from "@/lib/queries/analytics";
 import { listLeads } from "@/lib/queries/leads";
 import { AnalyticsFilterBar } from "@/components/analytics/AnalyticsFilterBar";
+import { AnalyticsTabs } from "@/components/analytics/AnalyticsTabs";
 import { FunnelSection } from "@/components/analytics/FunnelSection";
 import { BreakdownSection } from "@/components/analytics/BreakdownSection";
 import { TrendCharts } from "@/components/analytics/TrendCharts";
@@ -44,6 +45,8 @@ export default async function AnalyticsPage({
           Конверсія, канали лідогенерації та динаміка продажів.
         </p>
       </div>
+
+      <AnalyticsTabs />
 
       <AnalyticsFilterBar />
 
